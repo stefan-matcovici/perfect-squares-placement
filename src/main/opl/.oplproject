@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="ASCII"?><project>
+	<version>1.0</version>
+	<configs>
+		<config default="true" name="Configuration1" category="opl">
+			<ref name="perfect-square-placement.mod" type="model">
+			</ref>
+			<ref name="perfect-square-placement.ops" type="setting">
+			</ref>
+			<ref name="perfect-square-placement.dat" type="data">
+			</ref>
+		</config>
+	</configs>
+	
+</project>
