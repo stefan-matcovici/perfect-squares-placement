@@ -44,4 +44,12 @@
 
     </dependencies>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub stefan-matcovici Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/stefan-matcovici/perfect-squares-placement</url>
+        </repository>
+    </distributionManagement>
+
 </project>
