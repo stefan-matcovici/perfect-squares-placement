@@ -36,7 +36,10 @@ def visualize(width, height, rectangles):
     plt.show()
 
 
-def plot_grid(grid_to_plot):
+def plot_grid(grid_to_plot, *enclosing_squares):
     plt.imshow(grid_to_plot, cmap=cm.inferno)
     plt.xticks([]), plt.yticks([])
+
+    for square in enclosing_squares:
+        plt.gca().add_patch(patches.Rectangle((0, 0), square, square, linewidth=1, edgecolor='r', facecolor='none'))
     plt.show()

@@ -3,6 +3,10 @@ import numpy as np
 import datasets
 
 
+def get_enclosing_square_size(grid: np.ndarray):
+    return max(np.max(np.nonzero(grid[0, :])), np.max(np.nonzero(grid[:, 0])))
+
+
 def initial_greedy(grid, sizes, grid_size):
     next_square_index = 0
     for i in range(grid_size):
@@ -27,28 +31,33 @@ def place_square(grid, sizes, index, start):
 
 
 def optimize_greedy(filled_grid, sizes, big_square_optimum):
-    big_square_size = max(np.max(np.nonzero(filled_grid[0, :])), np.max(np.nonzero(filled_grid[:, 0])))
+    big_square_size = get_enclosing_square_size(filled_grid)
 
-    perfect_size = np.inf
+    optimal_filled_grid = filled_grid.copy()
+    optimal_square_size = big_square_size
 
     for size in range(big_square_size - 1, big_square_optimum, -1):
-        filled_grid = np.zeros((size, size))
+        current_filled_grid = np.zeros((size, size))
+
         next_square_index = 0
         try:
             for i in range(size):
                 for j in range(i + 1):
-                    filled_grid, next_square_index = place_square(filled_grid, sizes, next_square_index, (i - j, j))
+                    current_filled_grid, next_square_index = place_square(current_filled_grid, sizes, next_square_index,
+                                                                          (i - j, j))
                     if next_square_index == len(sizes):
                         raise Exception
             for i in range(size):
                 for j in range(i, 0, -1):
-                    filled_grid, next_square_index = place_square(filled_grid, sizes, next_square_index,
-                                                                  (size - i + j - 1, size - j))
+                    current_filled_grid, next_square_index = place_square(current_filled_grid, sizes, next_square_index,
+                                                                          (size - i + j - 1, size - j))
                     if next_square_index == len(sizes):
                         raise Exception
         except Exception:
-            perfect_size = size
-    return filled_grid, perfect_size
+            optimal_filled_grid = current_filled_grid.copy()
+            optimal_square_size = size
+
+    return optimal_filled_grid, optimal_square_size
 
 
 def greedy(dataset: datasets.Dataset):
