@@ -4,7 +4,7 @@ import datasets
 
 
 def get_enclosing_square_size(grid: np.ndarray):
-    return max(np.max(np.nonzero(grid[0, :])), np.max(np.nonzero(grid[:, 0])))
+    return np.max(np.nonzero(grid))
 
 
 def initial_greedy(grid, sizes, grid_size):
