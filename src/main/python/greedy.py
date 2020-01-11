@@ -104,7 +104,7 @@ def fill_both_ways(size_attempt, square_sizes):
 
 
 def greedy(dataset: datasets.Dataset):
-    starting_grid_size = int(dataset.master_square_size * 1.4)
+    starting_grid_size = int(dataset.master_square_size * 1.5)
 
     grid = np.zeros((starting_grid_size, starting_grid_size))
     filled_grid = initial_greedy(grid, dataset.square_sizes, starting_grid_size)
