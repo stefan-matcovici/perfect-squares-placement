@@ -5,7 +5,7 @@ from copy import deepcopy
 Rectangle = namedtuple('Rectangle', ['x', 'y', 'w', 'h'])
 
 
-def phspprg(width, rectangles, sorting="width"):
+def phspprg(width, rectangles):
     """
     The PH heuristic for the Strip Packing Problem. This is the RG variant, which means that rotations by
     90 degrees are allowed and that there is a guillotine constraint.

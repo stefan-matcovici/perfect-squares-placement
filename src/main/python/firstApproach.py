@@ -5,17 +5,16 @@ from deap import creator, base, tools
 from matplotlib import pyplot as plt, cm
 from matplotlib.colors import ListedColormap
 
-square_sizes = [2, 4, 6, 7, 8, 9, 11, 15, 16, 17, 18, 19, 24, 25, 27, 29, 33, 35, 37, 42, 50]
-optimal_square_size = 112
+import datasets
 
 
 def initIndividual():
     # how should we set the max value for the random
     # return randint(0, int(optimal_square_size)), randint(0, int(optimal_square_size))
-    return (0, 0)
+    return 0, 0
 
 
-def intersectionArea(a, i, b, j):
+def intersectionArea(a, i, b, j, square_sizes: list):
     dx = min(a[0] + square_sizes[i], b[0] + square_sizes[j]) - max(a[0], b[0])
     dy = min(a[1] + square_sizes[i], b[1] + square_sizes[j]) - max(a[1], b[1])
 
@@ -24,7 +23,7 @@ def intersectionArea(a, i, b, j):
     return 0
 
 
-def evaluate(individual: list):
+def evaluate(square_sizes: list, individual: list):
     # dimension of enclosing square
     maxX = max([x[0] + square_sizes[i] for i, x in enumerate(individual)])
     maxY = max([x[1] + square_sizes[i] for i, x in enumerate(individual)])
@@ -34,7 +33,7 @@ def evaluate(individual: list):
     comp2 = 0
     for i in range(len(individual) - 1):
         for j in range(i, len(individual)):
-            comp2 += intersectionArea(individual[i], i, individual[j], j)
+            comp2 += intersectionArea(individual[i], i, individual[j], j, square_sizes)
 
     return comp2,
 
@@ -43,28 +42,29 @@ def crossover(ind1: list, ind2: list):
     assert (len(ind1) == len(ind2))
 
     cxPoint = randint(0, len(ind1) - 1)
-    return creator.Individual(list(ind1[:cxPoint] + ind2[cxPoint:])), creator.Individual(list(ind2[:cxPoint] + ind1[cxPoint:]))
+    return creator.Individual(list(ind1[:cxPoint] + ind2[cxPoint:])), creator.Individual(
+        list(ind2[:cxPoint] + ind1[cxPoint:]))
 
 
-def mutation(ind: list):
+def mutation(dataset: datasets.Dataset, ind: list):
     result = ind
 
     mPoint = randint(0, len(ind) - 1)
-    result[mPoint] = (randint(0, int(optimal_square_size)), randint(0, int(optimal_square_size)))
+    result[mPoint] = (randint(0, dataset.master_square_size), randint(0, dataset.master_square_size))
 
     return result
 
 
-def mutationWithoutOverlap(ind: list):
+def mutationWithoutOverlap(dataset: datasets.Dataset, ind: list):
     result = ind
 
     mPoint = randint(0, len(ind) - 1)
 
-    grid = np.zeros((optimal_square_size * 3, optimal_square_size * 3))
+    grid = np.zeros((dataset.master_square_size * 3, dataset.master_square_size * 3))
 
-    for square_index in range(len(square_sizes)):
-        for x in range(ind[square_index][0], ind[square_index][0] + square_sizes[square_index]):
-            for y in range(ind[square_index][1], ind[square_index][1] + square_sizes[square_index]):
+    for square_index in range(len(dataset.square_sizes)):
+        for x in range(ind[square_index][0], ind[square_index][0] + dataset.square_sizes[square_index]):
+            for y in range(ind[square_index][1], ind[square_index][1] + dataset.square_sizes[square_index]):
                 if square_index != mPoint:
                     grid[x, y] = square_index
 
@@ -75,8 +75,8 @@ def mutationWithoutOverlap(ind: list):
     for i in range(comp1):
         for j in range(comp1):
             try:
-                for x in range(ind[mPoint][0], ind[mPoint][0] + square_sizes[mPoint]):
-                    for y in range(ind[mPoint][1], ind[mPoint][1] + square_sizes[mPoint]):
+                for x in range(ind[mPoint][0], ind[mPoint][0] + dataset.square_sizes[mPoint]):
+                    for y in range(ind[mPoint][1], ind[mPoint][1] + dataset.square_sizes[mPoint]):
                         if grid[x, y] != 0:
                             raise Exception
             except Exception:
@@ -90,7 +90,7 @@ def mutationWithoutOverlap(ind: list):
     return result
 
 
-def plot(ind):
+def plot(ind, square_sizes):
     maxX = max([x[0] + square_sizes[i] for i, x in enumerate(ind)])
     maxY = max([x[1] + square_sizes[i] for i, x in enumerate(ind)])
 
@@ -110,18 +110,18 @@ def plot(ind):
     plt.show()
 
 
-if __name__ == "__main__":
+def genetic_algorithm(dataset: datasets.Dataset, verbose=False):
     creator.create("FitnessMinMin", base.Fitness, weights=(-1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMinMin)
 
     toolbox = base.Toolbox()
 
-    toolbox.register("individual", tools.initRepeat, creator.Individual, initIndividual, n=len(square_sizes))
+    toolbox.register("individual", tools.initRepeat, creator.Individual, initIndividual, n=len(dataset.square_sizes))
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-    toolbox.register("evaluate", evaluate)
+    toolbox.register("evaluate", evaluate, dataset.square_sizes)
     toolbox.register("mate", crossover)
-    toolbox.register("mutate", mutation)
+    toolbox.register("mutate", mutation, dataset)
     toolbox.register("select", tools.selTournament)
     toolbox.register("selectBest", tools.selBest)
 
@@ -140,9 +140,9 @@ if __name__ == "__main__":
         ind.fitness.values = fit
 
     for g in range(NGEN):
-        # Logging current population fitnesses
         record = stats.compile(pop)
-        # print(record)
+        if verbose:
+            print(record)
 
         # Select the next generation individuals
         offspring = toolbox.select(pop, 50, tournsize=100)
@@ -171,4 +171,14 @@ if __name__ == "__main__":
         pop[:] = offspring
 
         best = toolbox.selectBest(pop, 1)
-        plot(best[0])
+        if verbose:
+            plot(best[0], dataset.square_sizes)
+
+    return best[0]
+
+
+if __name__ == "__main__":
+    dataset = datasets.datasets[6]
+
+    best = genetic_algorithm(dataset)
+    print(best.fitness)
