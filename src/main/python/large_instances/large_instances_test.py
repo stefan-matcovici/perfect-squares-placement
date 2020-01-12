@@ -17,5 +17,4 @@ if __name__ == '__main__':
     for i in range(100):
         dataset = datasets[i]
         result, t = call_greedy(dataset)
-        if result != -1 != t:
-            print(f"{i},{dataset.master_square_size},{dataset.no_squares},{result},{t:.2f}")
+        print(f"{i},{dataset.master_square_size},{dataset.no_squares},{result},{t:.2f}")
