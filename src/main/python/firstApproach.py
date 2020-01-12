@@ -7,6 +7,9 @@ from matplotlib.colors import ListedColormap
 
 import datasets
 
+creator.create("FitnessMinMin", base.Fitness, weights=(-1.0, -1.0))
+creator.create("Individual", list, fitness=creator.FitnessMinMin)
+
 
 def initIndividual():
     # how should we set the max value for the random
@@ -113,9 +116,6 @@ def plot(ind, square_sizes):
 
 def genetic_algorithm(dataset: datasets.Dataset, population_size: int, crossover_rate: float, mutation_rate: float,
                       no_generations: int, verbose=False):
-    creator.create("FitnessMinMin", base.Fitness, weights=(-1.0, -1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMinMin)
-
     toolbox = base.Toolbox()
 
     toolbox.register("individual", tools.initRepeat, creator.Individual, initIndividual, n=dataset.no_squares)
@@ -147,13 +147,31 @@ def genetic_algorithm(dataset: datasets.Dataset, population_size: int, crossover
 if __name__ == "__main__":
     dataset = datasets.datasets[0]
 
+    # initial scatter
     hof = genetic_algorithm(dataset=dataset, population_size=100, crossover_rate=0.6, mutation_rate=0.2,
-                            no_generations=10, verbose=False)
+                            no_generations=100, verbose=False)
     hof_objective_values = list(map(lambda x: x.values, hof.keys))
 
-    plt.scatter([x[0] for x in hof_objective_values], [x[1] for x in hof_objective_values])
+    initial_scatter = plt.plot([x[0] for x in hof_objective_values], [x[1] for x in hof_objective_values], marker='o',
+                               label='initial configuration')
+
+    # enclosing square scatter
+    hof = genetic_algorithm(dataset=dataset, population_size=82, crossover_rate=0.8825021708607684,
+                            mutation_rate=0.04680386827213015,
+                            no_generations=76, verbose=False)
+    hof_objective_values = list(map(lambda x: x.values, hof.keys))
+    enclosing_square_scatter = plt.plot([x[0] for x in hof_objective_values], [x[1] for x in hof_objective_values],
+                                        c='m', marker='s', label='optimizing enclosing square')
+
+    # enclosing square scatter
+    hof = genetic_algorithm(dataset=dataset, population_size=117, crossover_rate=0.736209493755327,
+                            mutation_rate=0.19149759030507416, no_generations=117, verbose=False)
+    hof_objective_values = list(map(lambda x: x.values, hof.keys))
+    overalpping_scatter = plt.plot([x[0] for x in hof_objective_values], [x[1] for x in hof_objective_values],
+                                   c='cyan', marker='D', label='optimizing overlapping')
+
     plt.xlabel("Enclosing square size")
-    plt.ylabel("Overalapping area")
-    plt.axvline(x=dataset.master_square_size, label='Optimal value for enclosing square size', c='r')
+    plt.ylabel("Overlapping area")
+    optim_line = plt.axvline(x=dataset.master_square_size, label='Optimal value for enclosing square size', c='r')
     plt.legend()
     plt.show()
