@@ -1,7 +1,7 @@
-from random import randint, random
+from random import randint
 
 import numpy as np
-from deap import creator, base, tools
+from deap import creator, base, tools, algorithms
 from matplotlib import pyplot as plt, cm
 from matplotlib.colors import ListedColormap
 
@@ -32,10 +32,10 @@ def evaluate(square_sizes: list, individual: list):
     # area of overlapping squares
     comp2 = 0
     for i in range(len(individual) - 1):
-        for j in range(i, len(individual)):
+        for j in range(i + 1, len(individual)):
             comp2 += intersectionArea(individual[i], i, individual[j], j, square_sizes)
 
-    return comp2,
+    return comp1, comp2
 
 
 def crossover(ind1: list, ind2: list):
@@ -50,9 +50,10 @@ def mutation(dataset: datasets.Dataset, ind: list):
     result = ind
 
     mPoint = randint(0, len(ind) - 1)
-    result[mPoint] = (randint(0, dataset.master_square_size), randint(0, dataset.master_square_size))
+    result[mPoint] = (
+        randint(0, int(dataset.master_square_size * 1.5)), randint(0, int(dataset.master_square_size * 1.5)))
 
-    return result
+    return result,
 
 
 def mutationWithoutOverlap(dataset: datasets.Dataset, ind: list):
@@ -105,80 +106,54 @@ def plot(ind, square_sizes):
     my_cmap[:, -1] = np.linspace(0, 1, cm.inferno.N)
     my_cmap = ListedColormap(my_cmap)
 
-    plt.imshow(grid, cmap=my_cmap)
+    plt.imshow(grid, cmap=my_cmap, alpha=0.3)
     plt.xticks([]), plt.yticks([])
     plt.show()
 
 
-def genetic_algorithm(dataset: datasets.Dataset, verbose=False):
-    creator.create("FitnessMinMin", base.Fitness, weights=(-1.0,))
+def genetic_algorithm(dataset: datasets.Dataset, population_size: int, crossover_rate: float, mutation_rate: float,
+                      no_generations: int, verbose=False):
+    creator.create("FitnessMinMin", base.Fitness, weights=(-1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMinMin)
 
     toolbox = base.Toolbox()
 
-    toolbox.register("individual", tools.initRepeat, creator.Individual, initIndividual, n=len(dataset.square_sizes))
+    toolbox.register("individual", tools.initRepeat, creator.Individual, initIndividual, n=dataset.no_squares)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
     toolbox.register("evaluate", evaluate, dataset.square_sizes)
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation, dataset)
-    toolbox.register("select", tools.selTournament)
+    toolbox.register("select", tools.selNSGA2)
     toolbox.register("selectBest", tools.selBest)
 
-    stats = tools.Statistics(key=lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean, axis=0)
-    stats.register("std", np.std, axis=0)
-    stats.register("min", np.min, axis=0)
-    stats.register("max", np.max, axis=0)
+    stats = None
+    if verbose:
+        stats = tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats.register("avg", np.mean, axis=0)
+        stats.register("std", np.std, axis=0)
+        stats.register("min", np.min, axis=0)
+        stats.register("max", np.max, axis=0)
 
-    pop = toolbox.population(n=100)
-    CXPB, MUTPB, NGEN = 0.6, 0.2, 100
+    pop = toolbox.population(n=population_size)
 
-    # Evaluate the entire population
-    fitnesses = map(toolbox.evaluate, pop)
-    for ind, fit in zip(pop, fitnesses):
-        ind.fitness.values = fit
+    hof = tools.ParetoFront()
 
-    for g in range(NGEN):
-        record = stats.compile(pop)
-        if verbose:
-            print(record)
-
-        # Select the next generation individuals
-        offspring = toolbox.select(pop, 50, tournsize=100)
-        # Clone the selected individuals
-        offspring = list(map(toolbox.clone, offspring))
-
-        # Apply crossover and mutation on the offspring
-        for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random() < CXPB:
-                child1, child2 = toolbox.mate(child1, child2)
-                del child1.fitness.values
-                del child2.fitness.values
-
-        for mutant in offspring:
-            if random() < MUTPB:
-                toolbox.mutate(mutant)
-                del mutant.fitness.values
-
-        # Evaluate the individuals with an invalid fitness
-        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = map(toolbox.evaluate, invalid_ind)
-        for ind, fit in zip(invalid_ind, fitnesses):
-            ind.fitness.values = fit
-
-        # The population is entirely replaced by the offspring
-        pop[:] = offspring
-
-        best = toolbox.selectBest(pop, 1)
-        if verbose:
-            plot(best[0], dataset.square_sizes)
-
-    return best[0]
+    algorithms.eaSimple(pop, toolbox, crossover_rate, mutation_rate, ngen=no_generations, stats=stats, halloffame=hof,
+                        verbose=verbose)
+    return hof
 
 
 if __name__ == "__main__":
-    dataset = datasets.datasets[6]
+    dataset = datasets.datasets[0]
 
-    best = genetic_algorithm(dataset)
-    print(best.fitness)
+    hof = genetic_algorithm(dataset=dataset, population_size=100, crossover_rate=0.6, mutation_rate=0.2,
+                            no_generations=10, verbose=False)
+    hof_objective_values = list(map(lambda x: x.values, hof.keys))
+
+    plt.scatter([x[0] for x in hof_objective_values], [x[1] for x in hof_objective_values])
+    plt.xlabel("Enclosing square size")
+    plt.ylabel("Overalapping area")
+    plt.axvline(x=dataset.master_square_size, label='Optimal value for enclosing square size', c='r')
+    plt.legend()
+    plt.show()
