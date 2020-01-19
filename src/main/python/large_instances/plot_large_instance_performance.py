@@ -49,13 +49,26 @@ def plot_time_exceeded(df: pd.DataFrame):
     plt.xticks(df_to_plot.index.values)
     plt.yticks(df_to_plot.time.values)
     plt.xlabel("No of squares")
+    plt.ylabel("No of instances")
+
+    plt.show()
+
+
+def plot_distribution(df: pd.DataFrame):
+    df_to_plot = pd.DataFrame(df[['square_no', 'time']].groupby('square_no').count())
+
+    ax = plt.axes()
+
+    ax.bar(df_to_plot.index.values, height=df_to_plot.time.values)
+    plt.xlabel("No of squares")
     plt.ylabel("Time exceeded percentage")
 
     plt.show()
 
 
 if __name__ == "__main__":
-    results = pd.read_csv("large_instances/results_100.csv")
-    plot_time(results)
-    plot_error(results)
-    plot_time_exceeded(results)
+    results = pd.read_csv("results_100.csv")
+    # plot_time(results)
+    # plot_error(results)
+    # plot_time_exceeded(results)
+    plot_distribution(results)
